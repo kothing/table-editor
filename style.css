@@ -1,0 +1,145 @@
+.table-controller-active {
+  border-spacing: 0px;
+  border-bottom: solid 1px #999;
+  border-right: solid 1px #999;
+  margin: 2em;
+}
+
+.table-controller-active td,
+.table-controller-active th {
+  border-top: solid 1px #999;
+  border-left: solid 1px #999;
+  min-height: 1.5em;
+  line-height: 1.5em;
+  min-width: 80px;
+  padding-left: 0.2em;
+  padding-right: 0.2em;
+  min-height: 1.5em;
+}
+
+.table-controller-active th {
+  background-color: #eee;
+}
+
+.table-controller.controller-row {
+  margin-left: -2em;
+  width: 1.8em;
+}
+
+.table-controller.controller-col {
+  margin-top: -2em;
+  height: 1.8em;
+}
+
+.table-controller.controller-row ul,
+.table-controller.controller-col ul {
+	display: flex;
+  border: solid #ccc 1px;
+  border-top-color: #eee;
+  border-left-color: #ddd;
+  border-right-color: #ddd;
+  list-style-type: none;
+  margin: 0px;
+  padding: 0px;
+  background-color: white;
+  overflow: hidden;
+
+  -webkit-box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 1px;
+  -msie-box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 1px;
+  -moz-box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 1px;
+  -o-box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 1px;
+  box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 1px;
+
+  -webkit-border-radius: 3px;
+  -msie-border-radius: 3px;
+  -moz-border-radius: 3px;
+  -o-border-radius: 3px;
+  border-radius: 3px;
+}
+
+.table-controller.controller-row ul {
+	flex-direction: column;
+}
+.table-controller.controller-col ul {
+	flex-direction: row;
+}
+
+.table-controller.controller-col ul > li {
+	text-align: center;
+  border-right: solid #eaeaea 1px;
+  height: 100%;
+  line-height: 1.7em;
+}
+
+.table-controller.controller-row ul > li {
+  border-bottom: solid #eaeaea 1px;
+  width: 100%;
+  line-height: 1.7em;
+}
+
+.table-controller.controller-col ul > li:hover,
+.table-controller.controller-row ul > li:hover {
+  background-color: #f0f0f0;
+}
+
+.table-controller.controller-col ul > li label,
+.table-controller.controller-row ul > li label {
+  display: block;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  font-size: 9pt;
+  color: #999;
+  cursor: pointer;
+}
+
+.table-controller-menu {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  margin: 0px;
+  padding: 0px;
+  list-style-type: none;
+  z-index: 10;
+  background-color: rgba(0, 0, 0, 0.8);
+  border: solid white 3px;
+
+  -webkit-border-radius: 4px;
+  -msie-border-radius: 4px;
+  -moz-border-radius: 4px;
+  -o-border-radius: 4px;
+  border-radius: 4px;
+
+  -webkit-box-shadow: rgba(0, 0, 0, 0.5) 1px 1px 2px;
+  -msie-box-shadow: rgba(0, 0, 0, 0.5) 1px 1px 2px;
+  -moz-box-shadow: rgba(0, 0, 0, 0.5) 1px 1px 2px;
+  -o-box-shadow: rgba(0, 0, 0, 0.5) 1px 1px 2px;
+  box-shadow: rgba(0, 0, 0, 0.5) 1px 1px 2px;
+
+  overflow: hidden;
+}
+
+.table-controller-menu li {
+  display: block;
+  padding-left: 0.5em;
+  padding-right: 0.5em;
+  min-width: 150px;
+  color: white;
+  font-size: 10pt;
+  line-height: 1.8em;
+
+  cursor: pointer;
+}
+
+.table-controller-menu li:hover {
+  background-color: black;
+}
+
+.table-controller-obscurer {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  top: 0px;
+  left: 0px;
+  z-index: 10;
+}
