@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf8" />
+	<title>Editor</title>
+	<style>
+		* {
+			box-sizing: border-box;
+			-moz-box-sizing: border-box;
+		}
+		body {
+			font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+		}
+	</style>
+	<link type="text/css" rel="stylesheet" href="style.css" />
+	<script type="text/javascript" src="./index.js"></script>
+	<script type="text/javascript">
+		(window.attachEvent || window.addEventListener)("load", function () {
+			const editor = new TableEditor(document.querySelector(".editable"));
+		}, false);
+
+	</script>
+</head>
+
+<body>
+	<h1>Table Editor</h1>
+	<table class="editable">
+		<thead>
+			<tr>
+				<th>stuff1</th>
+				<th>stuff2</th>
+				<th>stuff3</th>
+				<th>stuff4</th>
+				<th>stuff5</th>
+				<th>stuff6</th>
+				<th>stuff7</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				<td>stuff</td>
+				<td>stuff</td>
+				<td>stuff</td>
+				<td>stuff</td>
+				<td>stuff</td>
+				<td>stuff</td>
+				<td>stuff</td>
+			</tr>
+			<tr>
+				<td>stuff</td>
+				<td>stuff</td>
+				<td>stuff</td>
+				<td>stuff</td>
+				<td>stuff</td>
+				<td>stuff</td>
+				<td>stuff</td>
+			</tr>
+		</tbody>
+	</table>
+
+</body>
+
+</html>
