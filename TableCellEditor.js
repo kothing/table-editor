@@ -38,9 +38,9 @@ class TableCellEditor {
     for (let i = 0; i < this.table.rows.length; i++) {
       for (let j = 0; j < this.table.rows[i].cells.length; j++) {
         const curtCell = this.table.rows[i].cells[j];
-        const curtCellId = curtCell.id;
+        const curtCellId = curtCell.getAttribute("id");
         const rcData = this.getRC(curtCell, this.totalCell);
-        curtCell.setAttribute("rc", rcData);
+        // curtCell.setAttribute("rc", rcData);
         this.rcMaps[curtCellId] = JSON.parse(rcData);
       }
     }
@@ -104,7 +104,8 @@ class TableCellEditor {
   addSelectedClass() {
     for (let tr of this.table.rows) {
       for (let td of tr.cells) {
-        let rc = JSON.parse(td.getAttribute("rc"));
+        let rc = this.rcMaps[td.getAttribute("id")];
+        // let rc = JSON.parse(td.getAttribute("rc"));
         // 在范围内加上高亮样式
         if (
           rc.startRowIndex >= this.MMRC.startRowIndex &&
@@ -125,7 +126,8 @@ class TableCellEditor {
     let rangeChange = false;
     for (let tr of this.table.rows) {
       for (let td of tr.cells) {
-        let rc = JSON.parse(td.getAttribute("rc") /* as string*/);
+        let rc = this.rcMaps[td.getAttribute("id")];
+        // let rc = JSON.parse(td.getAttribute("rc"));
         //判断单元格4个顶点是否在范围内
         if (
           (rc.startRowIndex >= this.MMRC.startRowIndex &&
@@ -196,7 +198,8 @@ class TableCellEditor {
       this.endTD = o;
       this.startTD = o;
       this.startTD.classList.add("selected");
-      this.MMRC = JSON.parse(o.getAttribute("rc"));
+      // this.MMRC = JSON.parse(o.getAttribute("rc"));
+      this.MMRC = this.rcMaps[o.getAttribute("id")];
     }
 
     const onMousemove = (e) => {
@@ -226,8 +229,11 @@ class TableCellEditor {
       this.endTD = o;
       this.removeAllSelectedClass();
 
-      let startRC = JSON.parse(this.startTD.getAttribute("rc") /* as string*/);
-      let endRC = JSON.parse(this.endTD.getAttribute("rc") /* as string*/);
+      // let startRC = JSON.parse(this.startTD.getAttribute("rc"));
+      // let endRC = JSON.parse(this.endTD.getAttribute("rc"));
+
+      let startRC = this.rcMaps[this.startTD.getAttribute("id")];
+      let endRC = this.rcMaps[this.endTD.getAttribute("id")];
 
       // 求2个单元格的开始rowIndex，结束rowIndex，开始cellIndex和结束cellIndex
       let startRowIndex = Math.min.call(null, startRC.startRowIndex, endRC.startRowIndex);
@@ -283,7 +289,8 @@ class TableCellEditor {
       firstTD.setAttribute("colspan", this.MMRC.endCellIndex - this.MMRC.startCellIndex + 1);
       firstTD.setAttribute("rowspan", this.MMRC.endRowIndex - this.MMRC.startRowIndex + 1);
 
-      firstTD.setAttribute("rc", JSON.stringify(this.MMRC));
+      // firstTD.setAttribute("rc", JSON.stringify(this.MMRC));
+      this.rcMaps[firstTD.getAttribute("id")] = this.MMRC;
     }
     this.removeAllSelectedClass();
     this.MMRC = null;
@@ -324,7 +331,8 @@ class TableCellEditor {
         // 拷贝到数组，而不是直接遍历tr.cells，cells会受cellspan，rowspan影响
         cells = Array.from(tr.cells);
         for (let td of cells) {
-          let rc = JSON.parse(td.getAttribute("rc") /* as string*/);
+          // let rc = JSON.parse(td.getAttribute("rc"));
+          let rc = this.rcMaps[td.getAttribute("id")];
           // rowspan新增的单元格跳过
           if (!rc) {
             continue;
@@ -377,7 +385,8 @@ class TableCellEditor {
     }
     for (let tr of this.table.rows) {
       for (let td of tr.cells) {
-        let rc = JSON.parse(td.getAttribute("rc"));
+        // let rc = JSON.parse(td.getAttribute("rc"));
+        let rc = this.rcMaps[td.getAttribute("id")];
         if (rc.startCellIndex <= col && col <= rc.endCellIndex) {
           if (rc.startCellIndex === rc.endCellIndex) {
             //只有一个，删掉
