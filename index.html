@@ -2,65 +2,124 @@
 <html lang="en">
 
 <head>
-	<meta charset="utf8" />
-	<title>Editor</title>
-	<style>
-		* {
-			box-sizing: border-box;
-			-moz-box-sizing: border-box;
-		}
+  <meta charset="utf8" />
+  <title>Table Editor</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      -moz-box-sizing: border-box;
+    }
 
-		body {
-			font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
-		}
-	</style>
-	<link type="text/css" rel="stylesheet" href="style.css" />
-	<script src="./TableEditor.js"></script>
+    body {
+      font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+      margin: 0;
+    }
+
+    .container {
+      width: 80%;
+      margin: 0 auto;
+    }
+  </style>
+  <link type="text/css" rel="stylesheet" href="style.css" />
+  <script type="text/javascript" src="./table-row-col.js"></script>
+  <script type="text/javascript" src="./table-merge-split.js"></script>
 </head>
 
 <body>
-	<h1>Table Editor</h1>
-	<table class="editable">
-		<thead>
-			<tr>
-				<th>stuff1</th>
-				<th>stuff2</th>
-				<th>stuff3</th>
-				<th>stuff4</th>
-				<th>stuff5</th>
-				<th>stuff6</th>
-				<th>stuff7</th>
-			</tr>
-		</thead>
-		<tbody>
-			<tr>
-				<td>stuff</td>
-				<td>stuff</td>
-				<td>stuff</td>
-				<td>stuff</td>
-				<td>stuff</td>
-				<td>stuff</td>
-				<td>stuff</td>
-			</tr>
-			<tr>
-				<td>stuff</td>
-				<td>stuff</td>
-				<td>stuff</td>
-				<td>stuff</td>
-				<td>stuff</td>
-				<td>stuff</td>
-				<td>stuff</td>
-			</tr>
-		</tbody>
-	</table>
-	<script type="text/javascript">
-		(window.attachEvent || window.addEventListener)("load", () => {
-			const myTable = new TableEditor(document.querySelector(".editable"));
-			myTable.on("updateRender", (column) => {
-				console.log("Table updated");
-			});
-		}, false);
-	</script>
+  <div class="container">
+    <h1>Table Editor</h1>
+    <br />
+    <table id="editable-tb1" class="editable-table">
+      <thead>
+        <tr>
+          <th>stuff1</th>
+          <th>stuff2</th>
+          <th>stuff3</th>
+          <th>stuff4</th>
+          <th>stuff5</th>
+          <th>stuff6</th>
+          <th>stuff7</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>stuff</td>
+          <td>stuff</td>
+          <td>stuff</td>
+          <td>stuff</td>
+          <td>stuff</td>
+          <td>stuff</td>
+          <td>stuff</td>
+        </tr>
+        <tr>
+          <td>stuff</td>
+          <td>stuff</td>
+          <td>stuff</td>
+          <td>stuff</td>
+          <td>stuff</td>
+          <td>stuff</td>
+          <td>stuff</td>
+        </tr>
+      </tbody>
+    </table>
+    <script type="text/javascript">
+      (window.attachEvent || window.addEventListener)("load", () => {
+        const myTable = new TableRowCol(document.querySelector("#editable-tb1"));
+        myTable.on("updateRender", (column) => {
+          console.log("Table updated");
+        });
+      }, false);
+    </script>
+
+    <br />
+    <hr />
+    <br />
+
+    <table id="editable-tb2" class="editable-table">
+      <tr>
+        <td colspan="2">0-0，0-1</td>
+        <td rowspan="2">0-2<br />1-2</td>
+        <td>0-3</td>
+        <td>0-4</td>
+      </tr>
+      <tr>
+        <td>1-0</td>
+        <td>1-1</td>
+        <td colspan="2">1-3,1-4</td>
+      </tr>
+      <tr>
+        <td rowspan="2">2-0<br />3-0</td>
+        <td>2-1</td>
+        <td colspan="2">2-2,2-3</td>
+        <td>2-4</td>
+      </tr>
+      <tr>
+        <td>3-1</td>
+        <td colspan="3">3-2,3-3,3-4</td>
+      </tr>
+    </table>
+    <br />
+    <button type="button" id="btn-merge">合并选中单元格</button>
+    <button type="button" id="btn-split">取消合并选中单元格</button>
+    <button type="button" id="btn-delete">删除指定列</button>
+    <br />
+    <br />
+    <br />
+
+    <script type="text/javascript">
+      (window.attachEvent || window.addEventListener)("load", function () {
+        const myTable = new TableMergeSplit(document.querySelector("#editable-tb2"));
+
+        const mergeBtn = document.querySelector("#btn-merge");
+        const splitBtn = document.querySelector("#btn-split");
+        const deleteBtn = document.querySelector("#btn-delete");
+
+        mergeBtn.addEventListener("click", () => myTable.mergeCells.call(myTable));
+        splitBtn.addEventListener("click", () => myTable.splitCells.call(myTable));
+        deleteBtn.addEventListener("click", () => myTable.deleteColumn.call(myTable));
+      }, false);
+    </script>
+  </div>
 </body>
 
 </html>
