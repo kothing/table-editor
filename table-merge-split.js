@@ -1,7 +1,7 @@
 /**
- * Talbe cell editor
+ * Table merge or split
  */
-class TableCellEditor {
+class TableMergeSplit {
   constructor(table) {
     this.table = table;
     this.startTD = null;
@@ -37,10 +37,12 @@ class TableCellEditor {
     }
     for (let i = 0; i < this.table.rows.length; i++) {
       for (let j = 0; j < this.table.rows[i].cells.length; j++) {
+        if(!this.table.rows[i].cells[j].hasAttribute("id")) {
+          this.table.rows[i].cells[j].setAttribute("id", `cell_${i}_${j}`);
+        }
         const curtCell = this.table.rows[i].cells[j];
         const curtCellId = curtCell.getAttribute("id");
         const rcData = this.getRC(curtCell, this.totalCell);
-        // curtCell.setAttribute("rc", rcData);
         this.rcMaps[curtCellId] = JSON.parse(rcData);
       }
     }
@@ -105,7 +107,6 @@ class TableCellEditor {
     for (let tr of this.table.rows) {
       for (let td of tr.cells) {
         let rc = this.rcMaps[td.getAttribute("id")];
-        // let rc = JSON.parse(td.getAttribute("rc"));
         // 在范围内加上高亮样式
         if (
           rc.startRowIndex >= this.MMRC.startRowIndex &&
@@ -127,7 +128,6 @@ class TableCellEditor {
     for (let tr of this.table.rows) {
       for (let td of tr.cells) {
         let rc = this.rcMaps[td.getAttribute("id")];
-        // let rc = JSON.parse(td.getAttribute("rc"));
         //判断单元格4个顶点是否在范围内
         if (
           (rc.startRowIndex >= this.MMRC.startRowIndex &&
@@ -198,7 +198,6 @@ class TableCellEditor {
       this.endTD = o;
       this.startTD = o;
       this.startTD.classList.add("selected");
-      // this.MMRC = JSON.parse(o.getAttribute("rc"));
       this.MMRC = this.rcMaps[o.getAttribute("id")];
     }
 
@@ -229,9 +228,6 @@ class TableCellEditor {
       this.endTD = o;
       this.removeAllSelectedClass();
 
-      // let startRC = JSON.parse(this.startTD.getAttribute("rc"));
-      // let endRC = JSON.parse(this.endTD.getAttribute("rc"));
-
       let startRC = this.rcMaps[this.startTD.getAttribute("id")];
       let endRC = this.rcMaps[this.endTD.getAttribute("id")];
 
@@ -248,16 +244,10 @@ class TableCellEditor {
     }
   }
 
-  // Mouseup event
-  onMouseup() {
-    this.table.removeEventListener("mousemove", onMousemove);
-    this.table.removeEventListener("mouseup", onMouseup);
-  }
-
   /**
-   * 获取 text
+   * 获取 cell text
    */
-  getText() {
+  getCellText() {
     let text = [];
     for (let tr of this.table.rows) {
       let hit = false;
@@ -278,7 +268,7 @@ class TableCellEditor {
     if (this.startTD && this.endTD && this.startTD !== this.endTD) {
       let tds = Array.from(this.table.querySelectorAll("td.selected"));
       let firstTD = tds[0];
-      let html = this.getText();
+      let html = this.getCellText();
 
       for (let i = 1; i < tds.length; i++) {
         tds[i].parentNode.removeChild(tds[i]);
@@ -289,7 +279,6 @@ class TableCellEditor {
       firstTD.setAttribute("colspan", this.MMRC.endCellIndex - this.MMRC.startCellIndex + 1);
       firstTD.setAttribute("rowspan", this.MMRC.endRowIndex - this.MMRC.startRowIndex + 1);
 
-      // firstTD.setAttribute("rc", JSON.stringify(this.MMRC));
       this.rcMaps[firstTD.getAttribute("id")] = this.MMRC;
     }
     this.removeAllSelectedClass();
@@ -318,9 +307,12 @@ class TableCellEditor {
   /**
    * 拆分
    */
-  breakCells() {
+  splitCells() {
     if (this.MMRC) {
-      if (this.MMRC.startRowIndex === this.MMRC.endRowIndex && this.MMRC.startCellIndex === this.MMRC.endCellIndex) {
+      if (
+        this.MMRC.startRowIndex === this.MMRC.endRowIndex && 
+        this.MMRC.startCellIndex === this.MMRC.endCellIndex
+      ) {
         alert("无法拆分！");
         return;
       }
@@ -331,7 +323,6 @@ class TableCellEditor {
         // 拷贝到数组，而不是直接遍历tr.cells，cells会受cellspan，rowspan影响
         cells = Array.from(tr.cells);
         for (let td of cells) {
-          // let rc = JSON.parse(td.getAttribute("rc"));
           let rc = this.rcMaps[td.getAttribute("id")];
           // rowspan新增的单元格跳过
           if (!rc) {
@@ -385,7 +376,6 @@ class TableCellEditor {
     }
     for (let tr of this.table.rows) {
       for (let td of tr.cells) {
-        // let rc = JSON.parse(td.getAttribute("rc"));
         let rc = this.rcMaps[td.getAttribute("id")];
         if (rc.startCellIndex <= col && col <= rc.endCellIndex) {
           if (rc.startCellIndex === rc.endCellIndex) {
