@@ -1,13 +1,97 @@
 /**
- * TableEditor
+ * Check if element is node
+ * @param {*} object
+ * @returns boolean
  */
-class TableEditor {
+const isNode = (object) => {
+  return Boolean(
+    object &&
+      typeof object.nodeName === "string" &&
+      typeof object.nodeType === "number" &&
+      object.childNodes &&
+      typeof object.appendChild === "function"
+  );
+};
+
+/**
+ * Creates HTML element in editor document
+ *
+ * @param {string} name
+ * @param {Object.<string, string>} [attributes = {}]
+ * @param {string} [html = '']
+ * @return {HTMLElement}
+ */
+const createElement = (name, { attributes = {}, html = "" } = {}) => {
+  const element = document.createElement(name);
+  element.innerHTML = html;
+  Object.entries(attributes).forEach(
+    ([key, val]) => val && element.setAttribute(key, `${val}`)
+  );
+  return element;
+};
+
+/**
+ * Wraps element with given parent
+ *
+ * @param {HTMLElement} element
+ * @param {string} tag
+ * @param {Object} [options = {}]
+ * @return {void}
+ */
+const wrapElement = (element, tag, options) => {
+  const wrapper = isNode(tag) ? tag : createElement(tag, options);
+  if (isNode(element)) {
+    if (!element.parentNode) {
+      throw new Error("Element should be in DOM");
+    }
+    element.parentNode.insertBefore(wrapper, element);
+    wrapper.appendChild(element);
+  } else {
+    const fragment = element.extractContents();
+    element.insertNode(wrapper);
+    wrapper.appendChild(fragment);
+  }
+};
+
+/**
+ * getElementOffset
+ * @param {*} element
+ */
+const getElementOffset = (element) => {
+  const offset = { x: 0, y: 0, width: 0, height: 0 };
+
+  if (element instanceof HTMLElement) {
+    offset.width = element.offsetWidth;
+    offset.height = element.offsetHeight;
+
+    do {
+      offset.x += element.offsetLeft;
+      offset.y += element.offsetTop;
+    } while ((element = element.offsetParent));
+
+    return offset;
+  } else {
+    throw new Error("");
+  }
+};
+
+/**
+ * Table row col edit
+ */
+class TableRowCol {
   constructor(table, options) {
-    this.table = table instanceof HTMLTableElement ? table : document.createElement("table");
+    this.table = table instanceof HTMLTableElement
+      ? table
+      : document.createElement("table");
     this.options = options instanceof Object ? options : {};
 
     this.rowIndex = [];
     this.colIndex = [];
+
+    // Wrap the table with new elements
+    wrapElement(this.table, "div", {
+      attributes: { class: "table-editor-wrap" },
+    });
 
     ["thead", "tbody", "tfoot", "summary"].forEach((tag) => {
       this[tag] = this.table.getElementsByTagName(tag).length
@@ -23,15 +107,6 @@ class TableEditor {
 
     // Now build an internal representation of our rows and columns
     this.updateRender();
-  }
-
-  /**
-   * Render to
-   * @param {*} destination
-   */
-  renderTo(destination) {
-    destination.appendChild(this.table);
-    this.emit("renderTo");
   }
 
   /**
@@ -86,8 +161,7 @@ class TableEditor {
       row.index = rIndex;
 
       // First, get a sanitised list of cells.
-      // Try not to rely on QSA - ES5 array methods can be polyfilled
-      // more easily than QSA can.
+      // Try not to rely on QSA - ES5 array methods can be polyfilled more easily than QSA can.
       const cells = [].slice.call(row.childNodes, 0).filter((node) => {
         return node.nodeType === 1 && node instanceof HTMLTableCellElement;
       });
@@ -119,6 +193,8 @@ class TableEditor {
    * Render controller
    */
   renderController() {
+    const tableParent = this.table.parentElement || document.body;
+
     // row controller
     this.rowController = document.createElement("div");
     this.rowController.appendChild(document.createElement("ul"));
@@ -139,21 +215,33 @@ class TableEditor {
 
     // And to any document or interaction events we might need to keep our UI looking nice...
     window.addEventListener("resize", this.updateControllerPosition.bind(this));
-    document.addEventListener("scroll", this.updateControllerPosition.bind(this));
-    this.table.addEventListener("keydown", this.updateControllerPosition.bind(this));
-    this.table.addEventListener("keyup", this.updateControllerPosition.bind(this));
+    document.addEventListener(
+      "scroll",
+      this.updateControllerPosition.bind(this)
+    );
+    this.table.addEventListener(
+      "keydown",
+      this.updateControllerPosition.bind(this)
+    );
+    this.table.addEventListener(
+      "keyup",
+      this.updateControllerPosition.bind(this)
+    );
 
     // And now set some events for our obscure-layer
     const removeControllerMenu = () => {
-      document.body.removeChild(this.controllerMenuObscurer);
-      document.body.removeChild(this.controllerMenuElement);
+      tableParent.removeChild(this.controllerMenuObscurer);
+      tableParent.removeChild(this.controllerMenuElement);
     };
 
     this.controllerMenuObscurer.addEventListener("click", removeControllerMenu);
-    this.controllerMenuObscurer.addEventListener("touchstart", removeControllerMenu);
+    this.controllerMenuObscurer.addEventListener(
+      "touchstart",
+      removeControllerMenu
+    );
 
-    this.table.parentElement.appendChild(this.rowController);
-    this.table.parentElement.appendChild(this.colController);
+    tableParent.appendChild(this.rowController);
+    tableParent.appendChild(this.colController);
   }
 
   /**
@@ -207,7 +295,7 @@ class TableEditor {
    */
   updateControllerPosition() {
     // The UI centers around the table. So get the table offset...
-    const tableOffset = this.getElementOffset(this.table);
+    const tableOffset = getElementOffset(this.table);
 
     let scrollTop = document.body.scrollTop >= 0 ? document.body.scrollTop : 0,
       scrollLeft = document.body.scrollLeft >= 0 ? document.body.scrollLeft : 0,
@@ -223,9 +311,15 @@ class TableEditor {
       tableRight = tableOffset.width + tableOffset.x;
 
     // Check to ensure our values are in bounds...
-    scrollTop = scrollTop + wheight > document.body.scrollHeight ? document.body.scrollHeight - wheight : scrollTop;
+    scrollTop =
+      scrollTop + wheight > document.body.scrollHeight
+        ? document.body.scrollHeight - wheight
+        : scrollTop;
 
-    scrollLeft = scrollLeft + wwidth > document.body.scrollWidth ? document.body.scrollLeft - wwidth : scrollLeft;
+    scrollLeft =
+      scrollLeft + wwidth > document.body.scrollWidth
+        ? document.body.scrollLeft - wwidth
+        : scrollLeft;
 
     const rowCrtlScrollTop = top - 40 <= 0 ? (top - 40) * -1 : 0;
     const colCtrlScrollLeft = left - 40 <= 0 ? (left - 40) * -1 : 0;
@@ -235,8 +329,14 @@ class TableEditor {
     left = left <= 40 ? 40 : left;
     height = top + height > wheight - 3 ? wheight - top - 3 : height;
     width = left + width > wwidth - 3 ? wwidth - left - 3 : width;
-    height = tableBase - scrollTop - top < height ? tableBase - scrollTop - top : height;
-    width = tableRight - scrollLeft - left < width ? tableRight - scrollLeft - left : width;
+    height =
+      tableBase - scrollTop - top < height
+        ? tableBase - scrollTop - top
+        : height;
+    width =
+      tableRight - scrollLeft - left < width
+        ? tableRight - scrollLeft - left
+        : width;
 
     this.rowController.style.height = height + "px";
     this.rowController.style.top = top + "px";
@@ -252,7 +352,7 @@ class TableEditor {
     const rowControllerChilds = this.rowController.firstElementChild.childNodes;
     [].slice.call(rowControllerChilds).forEach((node, index) => {
       if (this.rowIndex[index]) {
-        const rowDimensions = this.getElementOffset(this.rowIndex[index]);
+        const rowDimensions = getElementOffset(this.rowIndex[index]);
         node.style.height = rowDimensions.height + "px";
       }
     });
@@ -261,7 +361,7 @@ class TableEditor {
     [].slice.call(colControllerChilds).forEach((node, index) => {
       if (this.colIndex[index]) {
         const col = this.colIndex[index][0];
-        const colDimensions = this.getElementOffset(col);
+        const colDimensions = getElementOffset(col);
         node.style.width = colDimensions.width + "px";
       }
     });
@@ -275,6 +375,7 @@ class TableEditor {
    * @returns
    */
   showControllerMenu(orientation, tab, object) {
+    const tableParent = this.table.parentElement || document.body;
     let objectName = orientation === "row" ? "Row" : "Column";
     let index = object.index !== undefined ? object.index : object[0].index;
 
@@ -283,8 +384,8 @@ class TableEditor {
       menuItemLi.innerHTML = text;
 
       const handleMenu = () => {
-        document.body.removeChild(this.controllerMenuObscurer);
-        document.body.removeChild(this.controllerMenuElement);
+        tableParent.removeChild(this.controllerMenuObscurer);
+        tableParent.removeChild(this.controllerMenuElement);
         handler();
       };
 
@@ -292,14 +393,15 @@ class TableEditor {
       menuItemLi.addEventListener("touchstart", handleMenu);
       return menuItemLi;
     };
-
+    
     this.controllerMenuElement.innerHTML = "";
-    document.body.appendChild(this.controllerMenuObscurer);
-    document.body.appendChild(this.controllerMenuElement);
+    tableParent.appendChild(this.controllerMenuObscurer);
+    tableParent.appendChild(this.controllerMenuElement);
 
-    let tabPosition = this.getElementOffset(tab);
+    let tabPosition = getElementOffset(tab);
     let menuX = tabPosition.x + (orientation === "row" ? tabPosition.width : 0);
-    let menuY = tabPosition.y + (orientation !== "row" ? tabPosition.height : 0);
+    let menuY =
+      tabPosition.y + (orientation !== "row" ? tabPosition.height : 0);
 
     this.controllerMenuElement.appendChild(
       menuItem("Delete " + objectName, () => {
@@ -372,7 +474,9 @@ class TableEditor {
 
     // Populate with new cells
     while (newRow.childNodes.length < this.colIndex.length) {
-      const cell = document.createElement(kind === "header" || kind === "footer" ? "th" : "td");
+      const cell = document.createElement(
+        kind === "header" || kind === "footer" ? "th" : "td"
+      );
       cell.innerHTML = "&nbsp;";
       newRow.appendChild(cell);
     }
@@ -389,7 +493,11 @@ class TableEditor {
       this.thead.insertBefore(newRow, nextRow);
 
       // If the new row is a header directly after an element in thead we're in thead
-    } else if (nextRow && prevRow.parentNode === this.thead && kind === "header") {
+    } else if (
+      nextRow &&
+      prevRow.parentNode === this.thead &&
+      kind === "header"
+    ) {
       this.thead.appendChild(newRow);
 
       // If the new row is after any element in tfoot, we're in tfoot.
@@ -401,7 +509,11 @@ class TableEditor {
       }
 
       // If the new row is a header directly before an element in tfoot we're in tfoot
-    } else if (nextRow && nextRow.parentNode === this.tfoot && kind === "header") {
+    } else if (
+      nextRow &&
+      nextRow.parentNode === this.tfoot &&
+      kind === "header"
+    ) {
       this.tfoot.insertBefore(newRow, nextRow);
 
       // Or, if we're the first row and type header, we're in thead
@@ -442,7 +554,9 @@ class TableEditor {
     }
 
     if (this.rowIndex[rowIdentifier]) {
-      this.rowIndex[rowIdentifier].parentNode.removeChild(this.rowIndex[rowIdentifier]);
+      this.rowIndex[rowIdentifier].parentNode.removeChild(
+        this.rowIndex[rowIdentifier]
+      );
     } else {
       throw new Error("Row could not be located in index!");
     }
@@ -478,7 +592,9 @@ class TableEditor {
         rowKind = "header";
       }
 
-      const newCell = document.createElement(rowKind === "header" || rowKind === "footer" ? "th" : "td");
+      const newCell = document.createElement(
+        rowKind === "header" || rowKind === "footer" ? "th" : "td"
+      );
 
       newCell.innerHTML = "&nbsp;";
 
@@ -642,7 +758,11 @@ class TableEditor {
    */
   on(eventName, handler) {
     // We must have a valid name
-    if (!eventName || typeof eventName !== "string" || eventName.match(/[^a-z0-9\.\*\-]/gi)) {
+    if (
+      !eventName ||
+      typeof eventName !== "string" ||
+      eventName.match(/[^a-z0-9\.\*\-]/gi)
+    ) {
       throw new Error("Attempt to subscribe to event with invalid name!");
     }
 
@@ -656,7 +776,10 @@ class TableEditor {
       this.eventHandlers = {};
     }
 
-    if (this.eventHandlers[eventName] && this.eventHandlers[eventName] instanceof Array) {
+    if (
+      this.eventHandlers[eventName] &&
+      this.eventHandlers[eventName] instanceof Array
+    ) {
       this.eventHandlers[eventName].push(handler);
     } else {
       this.eventHandlers[eventName] = [handler];
@@ -678,7 +801,10 @@ class TableEditor {
     }
 
     // Ensure we've got handlers in the format we expect...
-    if (!this.eventHandlers[eventName] || !(this.eventHandlers[eventName] instanceof Array)) {
+    if (
+      !this.eventHandlers[eventName] ||
+      !(this.eventHandlers[eventName] instanceof Array)
+    ) {
       return;
     }
 
@@ -693,27 +819,5 @@ class TableEditor {
         // and with the arguments we were passed (less the event name)
         oHandler.apply(this, [].slice.call(args, 1));
       });
-  }
-
-  /**
-   * getElementOffset
-   * @param {*} element
-   */
-  getElementOffset(element) {
-    const offset = { x: 0, y: 0, width: 0, height: 0 };
-
-    if (element instanceof HTMLElement) {
-      offset.width = element.offsetWidth;
-      offset.height = element.offsetHeight;
-
-      do {
-        offset.x += element.offsetLeft;
-        offset.y += element.offsetTop;
-      } while ((element = element.offsetParent));
-
-      return offset;
-    } else {
-      throw new Error("");
-    }
   }
 }
