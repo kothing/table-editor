@@ -9,18 +9,13 @@
 			box-sizing: border-box;
 			-moz-box-sizing: border-box;
 		}
+
 		body {
 			font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
 		}
 	</style>
 	<link type="text/css" rel="stylesheet" href="style.css" />
-	<script type="text/javascript" src="./index.js"></script>
-	<script type="text/javascript">
-		(window.attachEvent || window.addEventListener)("load", function () {
-			const editor = new TableEditor(document.querySelector(".editable"));
-		}, false);
-
-	</script>
+	<script type="text/javascript" src="./TableEditor.js"></script>
 </head>
 
 <body>
@@ -58,7 +53,14 @@
 			</tr>
 		</tbody>
 	</table>
-
+	<script type="text/javascript">
+		(window.attachEvent || window.addEventListener)("load", () => {
+			const myTable = new TableEditor(document.querySelector(".editable"));
+			myTable.on("updateRender", (column) => {
+				console.log("Table updated");
+			});
+		}, false);
+	</script>
 </body>
 
 </html>
