@@ -1,5 +1,5 @@
 /**
- * tableEditor
+ * TableEditor
  */
 class TableEditor {
   constructor(table, options) {
@@ -9,26 +9,114 @@ class TableEditor {
     this.rowIndex = [];
     this.colIndex = [];
 
-    const getOrMakeTableTag = (tag) => {
+    ["thead", "tbody", "tfoot", "summary"].forEach((tag) => {
       this[tag] = this.table.getElementsByTagName(tag).length
         ? this.table.getElementsByTagName(tag)[0]
         : document.createElement(tag);
-    };
+    });
 
-    ["thead", "tbody", "tfoot", "summary"].forEach(getOrMakeTableTag);
-
-    // Assign some basic classes...
+    // Assign some basic classes
     this.table.className += " table-controller-active";
 
     // render controller
     this.renderController();
 
     // Now build an internal representation of our rows and columns
-    this.update();
+    this.updateRender();
   }
 
   /**
-   * Render table controller
+   * Render to
+   * @param {*} destination
+   */
+  renderTo(destination) {
+    destination.appendChild(this.table);
+    this.emit("renderTo");
+  }
+
+  /**
+   * Update
+   * @returns
+   */
+  updateRender() {
+    this.updateTableSection();
+    this.updateCellIndex();
+    this.updateCellState();
+    this.updateController();
+    this.emit("updateRender");
+  }
+
+  /**
+   * Update section elements
+   * @returns
+   */
+  updateTableSection() {
+    ["summary", "thead", "tbody", "tfoot"]
+      .map((item) => {
+        if (this[item].parentNode) {
+          this.table.removeChild(this[item]);
+        }
+        return item;
+      })
+      .forEach((key) => {
+        const cells = [].slice.call(this[key].childNodes, 0).filter((node) => {
+          return node.nodeType === 1;
+        });
+
+        if (cells.length) {
+          this.table.appendChild(this[key]);
+        }
+      });
+  }
+
+  /**
+   * Update index
+   * @returns
+   */
+  updateCellIndex() {
+    // First, get an idea of how many rows we're dealing with.
+    this.rowIndex = [].slice.call(this.table.getElementsByTagName("tr"), 0);
+
+    // Clear colindex
+    this.colIndex = [];
+
+    // Now loop through each row and generate column indexes.
+    this.rowIndex.forEach((row, rIndex) => {
+      // Save our row index!
+      row.index = rIndex;
+
+      // First, get a sanitised list of cells.
+      // Try not to rely on QSA - ES5 array methods can be polyfilled
+      // more easily than QSA can.
+      const cells = [].slice.call(row.childNodes, 0).filter((node) => {
+        return node.nodeType === 1 && node instanceof HTMLTableCellElement;
+      });
+
+      // Now loop through each cell
+      cells.forEach((cell, cIndex) => {
+        cell.index = cIndex;
+        if (cIndex > this.colIndex.length - 1) {
+          return this.colIndex.push([cell]);
+        }
+        this.colIndex[cIndex].push(cell);
+      });
+    });
+  }
+
+  /**
+   * Update cell states
+   * @returns
+   */
+  updateCellState() {
+    this.colIndex.forEach((col) => {
+      col.forEach((cell) => {
+        cell.setAttribute("contenteditable", "true");
+      });
+    });
+  }
+
+  /**
+   * Render controller
    */
   renderController() {
     // row controller
@@ -69,29 +157,27 @@ class TableEditor {
   }
 
   /**
-   * ============================================================
-   * table controller
+   * Update controller
    */
   updateController() {
-    const $this = this;
-    $this.rowController.firstElementChild.innerHTML = "";
-    $this.colController.firstElementChild.innerHTML = "";
+    this.rowController.firstElementChild.innerHTML = "";
+    this.colController.firstElementChild.innerHTML = "";
 
     // Generate list items for rows and cols.
-    $this.rowIndex.forEach((row, index) => {
+    this.rowIndex.forEach((row, index) => {
       const rowItem = document.createElement("li");
       const rowItemLabel = document.createElement("label");
 
       rowItemLabel.innerHTML = index + 1;
       rowItem.appendChild(rowItemLabel);
-      $this.rowController.firstElementChild.appendChild(rowItem);
+      this.rowController.firstElementChild.appendChild(rowItem);
 
       rowItem.addEventListener("click", () => {
-        $this.showControllerMenu("row", rowItem, row);
+        this.showControllerMenu("row", rowItem, row);
       });
     });
 
-    $this.colIndex.forEach((col, index) => {
+    this.colIndex.forEach((col, index) => {
       let unitAlpha = index % 26;
       let globalAlpha = (index / 26) | 0;
       let alphaString = String.fromCharCode(unitAlpha + 65);
@@ -105,14 +191,14 @@ class TableEditor {
       colItemLabel.innerHTML = alphaString;
 
       colItem.appendChild(colItemLabel);
-      $this.colController.firstElementChild.appendChild(colItem);
+      this.colController.firstElementChild.appendChild(colItem);
 
       colItem.addEventListener("click", () => {
-        $this.showControllerMenu("col", colItem, col);
+        this.showControllerMenu("col", colItem, col);
       });
     });
 
-    $this.updateControllerPosition();
+    this.updateControllerPosition();
   }
 
   /**
@@ -120,9 +206,8 @@ class TableEditor {
    * @returns
    */
   updateControllerPosition() {
-    const $this = this;
     // The UI centers around the table. So get the table offset...
-    const tableOffset = $this.getElementOffset($this.table);
+    const tableOffset = this.getElementOffset(this.table);
 
     let scrollTop = document.body.scrollTop >= 0 ? document.body.scrollTop : 0,
       scrollLeft = document.body.scrollLeft >= 0 ? document.body.scrollLeft : 0,
@@ -138,13 +223,9 @@ class TableEditor {
       tableRight = tableOffset.width + tableOffset.x;
 
     // Check to ensure our values are in bounds...
-    scrollTop = scrollTop + wheight > document.body.scrollHeight
-      ? document.body.scrollHeight - wheight
-      : scrollTop;
+    scrollTop = scrollTop + wheight > document.body.scrollHeight ? document.body.scrollHeight - wheight : scrollTop;
 
-    scrollLeft = scrollLeft + wwidth > document.body.scrollWidth
-      ? document.body.scrollLeft - wwidth
-      : scrollLeft;
+    scrollLeft = scrollLeft + wwidth > document.body.scrollWidth ? document.body.scrollLeft - wwidth : scrollLeft;
 
     const rowCrtlScrollTop = top - 40 <= 0 ? (top - 40) * -1 : 0;
     const colCtrlScrollLeft = left - 40 <= 0 ? (left - 40) * -1 : 0;
@@ -157,30 +238,30 @@ class TableEditor {
     height = tableBase - scrollTop - top < height ? tableBase - scrollTop - top : height;
     width = tableRight - scrollLeft - left < width ? tableRight - scrollLeft - left : width;
 
-    $this.rowController.style.height = height + "px";
-    $this.rowController.style.top = top + "px";
-    $this.rowController.style.left = left + "px";
-    $this.rowController.scrollTop = rowCrtlScrollTop;
+    this.rowController.style.height = height + "px";
+    this.rowController.style.top = top + "px";
+    this.rowController.style.left = left + "px";
+    this.rowController.scrollTop = rowCrtlScrollTop;
 
-    $this.colController.style.width = width + "px";
-    $this.colController.style.top = top + "px";
-    $this.colController.style.left = left + "px";
-    $this.colController.scrollLeft = colCtrlScrollLeft;
+    this.colController.style.width = width + "px";
+    this.colController.style.top = top + "px";
+    this.colController.style.left = left + "px";
+    this.colController.scrollLeft = colCtrlScrollLeft;
 
     // Set the dimensions of children in the row and col controller
-    const rowControllerChilds = $this.rowController.firstElementChild.childNodes;
-    [].slice.call(rowControllerChilds).forEach(function (node, index) {
-      if ($this.rowIndex[index]) {
-        const rowDimensions = $this.getElementOffset($this.rowIndex[index]);
+    const rowControllerChilds = this.rowController.firstElementChild.childNodes;
+    [].slice.call(rowControllerChilds).forEach((node, index) => {
+      if (this.rowIndex[index]) {
+        const rowDimensions = this.getElementOffset(this.rowIndex[index]);
         node.style.height = rowDimensions.height + "px";
       }
     });
 
-    const colControllerChilds = $this.colController.firstElementChild.childNodes;
-    [].slice.call(colControllerChilds).forEach(function (node, index) {
-      if ($this.colIndex[index]) {
-        const col = $this.colIndex[index][0];
-        const colDimensions = $this.getElementOffset(col);
+    const colControllerChilds = this.colController.firstElementChild.childNodes;
+    [].slice.call(colControllerChilds).forEach((node, index) => {
+      if (this.colIndex[index]) {
+        const col = this.colIndex[index][0];
+        const colDimensions = this.getElementOffset(col);
         node.style.width = colDimensions.width + "px";
       }
     });
@@ -194,163 +275,76 @@ class TableEditor {
    * @returns
    */
   showControllerMenu(orientation, tab, object) {
-    const $this = this;
     let objectName = orientation === "row" ? "Row" : "Column";
     let index = object.index !== undefined ? object.index : object[0].index;
 
-    function menuItem(text, handler) {
+    const menuItem = (text, handler) => {
       const menuItemLi = document.createElement("li");
       menuItemLi.innerHTML = text;
 
-      function handleMenu() {
-        document.body.removeChild($this.controllerMenuObscurer);
-        document.body.removeChild($this.controllerMenuElement);
+      const handleMenu = () => {
+        document.body.removeChild(this.controllerMenuObscurer);
+        document.body.removeChild(this.controllerMenuElement);
         handler();
-      }
+      };
 
       menuItemLi.addEventListener("click", handleMenu);
       menuItemLi.addEventListener("touchstart", handleMenu);
       return menuItemLi;
-    }
+    };
 
-    $this.controllerMenuElement.innerHTML = "";
-    document.body.appendChild($this.controllerMenuObscurer);
-    document.body.appendChild($this.controllerMenuElement);
+    this.controllerMenuElement.innerHTML = "";
+    document.body.appendChild(this.controllerMenuObscurer);
+    document.body.appendChild(this.controllerMenuElement);
 
-    let tabPosition = $this.getElementOffset(tab);
+    let tabPosition = this.getElementOffset(tab);
     let menuX = tabPosition.x + (orientation === "row" ? tabPosition.width : 0);
     let menuY = tabPosition.y + (orientation !== "row" ? tabPosition.height : 0);
 
-    $this.controllerMenuElement.appendChild(
-      menuItem("Delete " + objectName, function () {
-        $this["remove" + objectName](index);
+    this.controllerMenuElement.appendChild(
+      menuItem("Delete " + objectName, () => {
+        this["remove" + objectName](index);
       })
     );
 
-    $this.controllerMenuElement.appendChild(
-      menuItem("Insert Header " + objectName + " Before", function () {
-        $this["add" + objectName]("header", index);
+    this.controllerMenuElement.appendChild(
+      menuItem("Insert Header " + objectName + " Before", () => {
+        this["add" + objectName]("header", index);
       })
     );
 
-    $this.controllerMenuElement.appendChild(
-      menuItem("Insert Header " + objectName + " After", function () {
-        $this["add" + objectName]("header", index + 1);
+    this.controllerMenuElement.appendChild(
+      menuItem("Insert Header " + objectName + " After", () => {
+        this["add" + objectName]("header", index + 1);
       })
     );
 
-    $this.controllerMenuElement.appendChild(
-      menuItem("Insert " + objectName + " Before", function () {
-        $this["add" + objectName]("normal", index);
+    this.controllerMenuElement.appendChild(
+      menuItem("Insert " + objectName + " Before", () => {
+        this["add" + objectName]("normal", index);
       })
     );
 
-    $this.controllerMenuElement.appendChild(
-      menuItem("Insert " + objectName + " After", function () {
-        $this["add" + objectName]("normal", index + 1);
+    this.controllerMenuElement.appendChild(
+      menuItem("Insert " + objectName + " After", () => {
+        this["add" + objectName]("normal", index + 1);
       })
     );
 
-    $this.controllerMenuElement.appendChild(
-      menuItem("Convert to header " + objectName.toLowerCase(), function () {
-        $this["change" + objectName + "Type"](index, "header");
+    this.controllerMenuElement.appendChild(
+      menuItem("Convert to header " + objectName.toLowerCase(), () => {
+        this["change" + objectName + "Type"](index, "header");
       })
     );
 
-    $this.controllerMenuElement.appendChild(
-      menuItem("Convert to regular " + objectName.toLowerCase(), function () {
-        $this["change" + objectName + "Type"](index, "normal");
+    this.controllerMenuElement.appendChild(
+      menuItem("Convert to regular " + objectName.toLowerCase(), () => {
+        this["change" + objectName + "Type"](index, "normal");
       })
     );
 
-    $this.controllerMenuElement.style.left = menuX + "px";
-    $this.controllerMenuElement.style.top = menuY + "px";
-  }
-
-  /**
-   * Update
-   * @returns
-   */
-  update() {
-    this.updateSectionElements();
-    this.updateIndex();
-    this.updateCellStates();
-    this.updateController();
-
-    this.emit("update");
-  }
-
-  /**
-   * Update section elements
-   * @returns
-   */
-  updateSectionElements() {
-    const $this = this;
-    ["summary", "thead", "tbody", "tfoot"]
-      .map(function (item) {
-        if ($this[item].parentNode) {
-          $this.table.removeChild($this[item]);
-        }
-        return item;
-      })
-      .forEach((key) => {
-        const cells = [].slice.call($this[key].childNodes, 0).filter((node) => {
-          return node.nodeType === 1;
-        });
-
-        if (cells.length) {
-          $this.table.appendChild($this[key]);
-        }
-      });
-  }
-
-  /**
-   * Update index
-   * @returns
-   */
-  updateIndex() {
-    const $this = this;
-    // For now, we don't deal with colspan or rowspan.
-
-    // First, get an idea of how many rows we're dealing with.
-    $this.rowIndex = [].slice.call($this.table.getElementsByTagName("tr"), 0);
-
-    // Clear colindex
-    $this.colIndex = [];
-
-    // Now loop through each row and generate column indexes.
-    $this.rowIndex.forEach((row, rIndex) => {
-      // Save our row index!
-      row.index = rIndex;
-
-      // First, get a sanitised list of cells.
-      // Try not to rely on QSA - ES5 array methods can be polyfilled
-      // more easily than QSA can.
-      const cells = [].slice.call(row.childNodes, 0).filter((node) => {
-        return node.nodeType === 1 && node instanceof HTMLTableCellElement;
-      });
-
-      // Now loop through each cell
-      cells.forEach((cell, cIndex) => {
-        cell.index = cIndex;
-        if (cIndex > $this.colIndex.length - 1) {
-          return $this.colIndex.push([cell]);
-        }
-        $this.colIndex[cIndex].push(cell);
-      });
-    });
-  }
-
-  /**
-   * Update cell states
-   * @returns
-   */
-  updateCellStates() {
-    this.colIndex.forEach((col) => {
-      col.forEach((cell) => {
-        cell.setAttribute("contenteditable", "true");
-      });
-    });
+    this.controllerMenuElement.style.left = menuX + "px";
+    this.controllerMenuElement.style.top = menuY + "px";
   }
 
   /**
@@ -364,8 +358,7 @@ class TableEditor {
       position = this.rowIndex.length;
     }
 
-    // Ensure the position we've got is reasonable and not way
-    // out of bounds.
+    // Ensure the position we've got is reasonable and not way out of bounds.
     if (position > this.rowIndex.length) {
       position = this.rowIndex.length;
     }
@@ -380,9 +373,7 @@ class TableEditor {
     // Populate with new cells
     while (newRow.childNodes.length < this.colIndex.length) {
       const cell = document.createElement(kind === "header" || kind === "footer" ? "th" : "td");
-
       cell.innerHTML = "&nbsp;";
-
       newRow.appendChild(cell);
     }
 
@@ -436,7 +427,7 @@ class TableEditor {
     }
 
     // Update table information!
-    this.update();
+    this.updateRender();
   }
 
   /**
@@ -457,7 +448,7 @@ class TableEditor {
     }
 
     // Update the internal representation of the table.
-    this.update();
+    this.updateRender();
   }
 
   /**
@@ -466,24 +457,24 @@ class TableEditor {
    * @param {*} position
    */
   addColumn(kind, position) {
-    const $this = this;
+    // const this = this;
     if (position === null || position === undefined) {
-      position = $this.colIndex.length;
+      position = this.colIndex.length;
     }
 
     // Ensure the position we've got is reasonable and not way
     // out of bounds.
-    if (position > $this.colIndex.length) {
-      position = $this.colIndex.length;
+    if (position > this.colIndex.length) {
+      position = this.colIndex.length;
     }
 
     if (position < 0) position = 0;
 
     // Loop through all rows, appending column at current position.
-    $this.rowIndex.forEach(function (row) {
+    this.rowIndex.forEach((row) => {
       let rowKind = kind;
 
-      if (row.parentNode === $this.thead || row.parentNode === $this.tfoot) {
+      if (row.parentNode === this.thead || row.parentNode === this.tfoot) {
         rowKind = "header";
       }
 
@@ -491,18 +482,17 @@ class TableEditor {
 
       newCell.innerHTML = "&nbsp;";
 
-      if (position === $this.colIndex.length) {
+      if (position === this.colIndex.length) {
         row.appendChild(newCell);
       } else {
-        const cells = [].slice.call(row.childNodes, 0).filter(function (node) {
+        const cells = [].slice.call(row.childNodes, 0).filter((node) => {
           return node.nodeType === 1 && node instanceof HTMLTableCellElement;
         });
-
         row.insertBefore(newCell, cells[position]);
       }
     });
 
-    $this.update();
+    this.updateRender();
   }
 
   /**
@@ -517,9 +507,9 @@ class TableEditor {
     }
 
     if (this.colIndex[colIdentifier]) {
-      this.colIndex[colIdentifier].forEach(function (cell) {
+      this.colIndex[colIdentifier].forEach((cell) => {
         const row = cell.parentNode;
-        const cells = [].slice.call(row.childNodes, 0).filter(function (node) {
+        const cells = [].slice.call(row.childNodes, 0).filter((node) => {
           return node.nodeType === 1 && node instanceof HTMLTableCellElement;
         });
 
@@ -535,16 +525,7 @@ class TableEditor {
     }
 
     // Update the internal representation of the table.
-    this.update();
-  }
-
-  /**
-   * Render to
-   * @param {*} destination
-   */
-  renderTo(destination) {
-    destination.appendChild(this.table);
-    this.emit("renderto");
+    this.updateRender();
   }
 
   /**
@@ -579,7 +560,7 @@ class TableEditor {
     }
 
     if (!bulk) {
-      this.update();
+      this.updateRender();
     }
   }
 
@@ -593,8 +574,7 @@ class TableEditor {
       for (let x = 0; x < this.colIndex.length; x++) {
         this.changeCellType(x, y, newType, true);
       }
-
-      this.update();
+      this.updateRender();
     } else {
       throw new Error("Requested row index out of bounds.");
     }
@@ -606,12 +586,11 @@ class TableEditor {
    * @param {*} newType
    */
   changeColumnType(x, newType) {
-    const $this = this;
-    if ($this.colIndex[x]) {
-      $this.colIndex[x].forEach(function (cell, y) {
-        $this.changeCellType(x, y, newType, true);
+    if (this.colIndex[x]) {
+      this.colIndex[x].forEach((cell, y) => {
+        this.changeCellType(x, y, newType, true);
       });
-      $this.update();
+      this.updateRender();
     } else {
       throw new Error("Requested column index out of bounds.");
     }
@@ -635,7 +614,7 @@ class TableEditor {
       throw new Error("Requested column index out of bounds.");
     }
 
-    this.update();
+    this.updateRender();
   }
 
   /**
@@ -645,36 +624,24 @@ class TableEditor {
   summary(value) {
     if (!!value) {
       this.summary.innerText = value;
-      this.update();
+      this.updateRender();
     } else {
       return this.summary.innerText;
     }
   }
 
-  /*
-		Public: Function for binding a handler to a TableEdit event.
-		
-		eventName	-	String - name of event to bind handler to.
-		handler		-	Function which is bound to the event.
-		
-		Examples
-		
-			myTable.on("renderupdate",updateMyAppUI);
-			myVideo.on("newcolumn",function(column) {
-				console.log("A new column! I see it!");
-			});
-		
-		Returns the TableEdit object to which the handler was bound.
-	
-	*/
   /**
    * On
-   * @param {*} eventName
-   * @param {*} handler
+   * Function for binding a handler to a TableEdit event.
+   * @param {String} eventName name of event to bind handler to.
+   * @param {Function} handler which is bound to the event.
+   * Examples:
+			myTable.on("updateRender", function(column) {
+				console.log("A new column! I see it!");
+			});
    */
   on(eventName, handler) {
-    // We must have a valid name...
-
+    // We must have a valid name
     if (!eventName || typeof eventName !== "string" || eventName.match(/[^a-z0-9\.\*\-]/gi)) {
       throw new Error("Attempt to subscribe to event with invalid name!");
     }
@@ -684,8 +651,7 @@ class TableEditor {
       throw new Error("Attempt to subscribe to event without a handler!");
     }
 
-    // OK, we got this far.
-    // Create handler object if it doesn't exist...
+    // Create handler object if it doesn't exist
     if (!this.eventHandlers || !(this.eventHandlers instanceof Object)) {
       this.eventHandlers = {};
     }
@@ -697,47 +663,35 @@ class TableEditor {
     }
   }
 
-  /*
-		Private: Called by TableEdit internally when emitting an event. This
-		function is responsible for calling all the event handlers in turn.
-		
-		eventName	-	used to determine which event is being emitted.
-		
-		Examples
-		
-			this.emit("pause");
-			
-		Returns the TableEdit object which emitted the event in question.
-	
-	*/
   /**
    * Emit
-   * @param {*} eventName
+   * Called by TableEdit internally when emitting an event. This function is responsible for calling all the event handlers in turn.
+   * @param {*} eventName used to determine which event is being emitted.
+   * Examples: this.emit("pause");
    */
   emit(eventName) {
-    const $this = this;
     const args = arguments;
 
     // If we've lost our handler object, or have no handlers, just return.
-    if (!$this.eventHandlers) {
+    if (!this.eventHandlers) {
       return;
     }
 
     // Ensure we've got handlers in the format we expect...
-    if (!$this.eventHandlers[eventName] || !($this.eventHandlers[eventName] instanceof Array)) {
+    if (!this.eventHandlers[eventName] || !(this.eventHandlers[eventName] instanceof Array)) {
       return;
     }
 
     // OK, so we have handlers for this event.
-    $this.eventHandlers[eventName]
+    this.eventHandlers[eventName]
       // We need these to be functions!
-      .filter(function (handler) {
-        return handler instanceof Function;
+      .filter((iHandler) => {
+        return iHandler instanceof Function;
       })
-      .forEach(function (handler) {
+      .forEach((oHandler) => {
         // Execute each handler in the context of the Vixen object,
         // and with the arguments we were passed (less the event name)
-        handler.apply($this, [].slice.call(args, 1));
+        oHandler.apply(this, [].slice.call(args, 1));
       });
   }
 
